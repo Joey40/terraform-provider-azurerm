@@ -2491,27 +2491,38 @@ resource "azurerm_api_management" "test" {
 
 func (r ApiManagementResource) zonesTemplate(data acceptance.TestData) string {
 	return fmt.Sprintf(`
-%[1]s
-%[2]s
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "test" {
+  name     = "acctestRG-%[1]d"
+  location = "%[3]s"
+}
+
+resource "azurerm_resource_group" "test2" {
+  name     = "acctestRG-%[1]d"
+  location = "%[4]s"
+}
 
 resource "azurerm_public_ip" "test1" {
-  name                = "acctest-IP1-%[3]s"
+  name                = "acctest-IP1-%[2]s"
   resource_group_name = azurerm_resource_group.test.name
   location            = azurerm_resource_group.test.location
   sku                 = "Standard"
   allocation_method   = "Static"
-  domain_name_label   = "acctest-ip1-%[3]s"
+  domain_name_label   = "acctest-ip1-%[2]s"
 }
 
 resource "azurerm_public_ip" "test2" {
-  name                = "acctest-IP2-%[3]s"
+  name                = "acctest-IP2-%[2]s"
   resource_group_name = azurerm_resource_group.test2.name
   location            = azurerm_resource_group.test2.location
   sku                 = "Standard"
   allocation_method   = "Static"
-  domain_name_label   = "acctest-ip2-%[3]s"
+  domain_name_label   = "acctest-ip2-%[2]s"
 }
-`, r.virtualNetworkTemplate(data), r.virtualNetworkAdditionalLocationTemplate(data), data.RandomString)
+`, data.RandomInteger, data.RandomString, data.Locations.Primary, data.Locations.Secondary)
 }
 
 func (r ApiManagementResource) zones(data acceptance.TestData) string {
@@ -2529,24 +2540,15 @@ resource "azurerm_api_management" "test" {
   zones    = ["1", "2"]
 
   public_ip_address_id = azurerm_public_ip.test1.id
-  virtual_network_type = "Internal"
-
-  virtual_network_configuration {
-    subnet_id = azurerm_subnet.test.id
-  }
 
   additional_location {
     zones    = ["1", "2"]
-    location = azurerm_resource_group.test2.location
+    location = "%[4]s"
 
     public_ip_address_id = azurerm_public_ip.test2.id
-
-    virtual_network_configuration {
-      subnet_id = azurerm_subnet.test2.id
-    }
   }
 }
-`, r.zonesTemplate(data), data.RandomInteger)
+`, r.zonesTemplate(data), data.RandomInteger, data.Locations.Primary, data.Locations.Secondary)
 }
 
 func (r ApiManagementResource) zonesUpdate(data acceptance.TestData) string {
@@ -2564,21 +2566,12 @@ resource "azurerm_api_management" "test" {
   zones    = ["1"]
 
   public_ip_address_id = azurerm_public_ip.test1.id
-  virtual_network_type = "Internal"
-
-  virtual_network_configuration {
-    subnet_id = azurerm_subnet.test.id
-  }
 
   additional_location {
     zones    = ["1"]
     location = azurerm_resource_group.test2.location
 
     public_ip_address_id = azurerm_public_ip.test2.id
-
-    virtual_network_configuration {
-      subnet_id = azurerm_subnet.test2.id
-    }
   }
 }
 `, r.zonesTemplate(data), data.RandomInteger)
